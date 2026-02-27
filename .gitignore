@@ -33,4 +33,9 @@
 # Ignore key files for decrypting credentials and more.
 /config/*.key
 
-/frontend/
+/frontend/dist
+/frontend/node_modules
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/playwright/.cache/
+/frontend/.env
