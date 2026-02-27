@@ -6,7 +6,7 @@ Esta guía describe el proceso completo de instalación, configuración y ejecuc
 
 - **Backend:** [Instalación Backend](#instalación-backend)
 
-- **Frontend:** [Instalación Frontend](/frontend/README.md)
+- **Frontend:** [Instalación Frontend](/frontend/INSTALL.md)
 
 
 ## Instalación Backend
