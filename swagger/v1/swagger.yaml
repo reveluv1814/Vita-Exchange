@@ -1,0 +1,567 @@
+---
+openapi: 3.0.1
+info:
+  title: VitaWallet API V1
+  version: v1
+  description: API para VitaWallet - Sistema de billetera digital con soporte para
+    monedas fiat y criptomonedas.
+  contact:
+    name: VitaWallet Support
+    email: support@vitawallet.io
+paths:
+  "/auth/register":
+    post:
+      summary: Registrar nuevo usuario
+      tags:
+      - Auth
+      parameters: []
+      responses:
+        '201':
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT token para autenticación
+                  user:
+                    "$ref": "#/components/schemas/User"
+        '422':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/ValidationErrors"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+                password_confirmation:
+                  type: string
+                  example: password123
+              required:
+              - email
+              - password
+              - password_confirmation
+  "/auth/login":
+    post:
+      summary: Iniciar sesión
+      tags:
+      - Auth
+      parameters: []
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT token para autenticación
+                  user:
+                    "$ref": "#/components/schemas/User"
+        '401':
+          description: Credenciales inválidas
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: test@vitawallet.com
+                password:
+                  type: string
+                  example: password123
+              required:
+              - email
+              - password
+  "/api/balances":
+    get:
+      summary: Obtener balances del usuario
+      tags:
+      - Balances
+      security:
+      - Bearer: []
+      description: Retorna todos los balances de monedas del usuario autenticado
+      responses:
+        '200':
+          description: Balances obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balances:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Balance"
+                  total_usd:
+                    type: string
+                    description: Total in USD
+                    example: '1000.0'
+                  summary:
+                    type: object
+                    properties:
+                      total_usd:
+                        type: string
+                      currency_count:
+                        type: integer
+                      updated_at:
+                        type: string
+                        format: date-time
+        '401':
+          description: No autorizado - Token inválido o faltante
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/exchange":
+    post:
+      summary: Realizar intercambio de monedas
+      tags:
+      - Exchange
+      security:
+      - Bearer: []
+      description: Intercambia una cantidad de una moneda a otra. Valida saldo suficiente
+        y actualiza balances automáticamente.
+      parameters: []
+      responses:
+        '200':
+          description: Exchange realizado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transaction:
+                    "$ref": "#/components/schemas/Transaction"
+        '422':
+          description: Error en el intercambio (saldo insuficiente, moneda inválida,
+            etc.)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                from_currency:
+                  type: string
+                  enum:
+                  - USD
+                  - CLP
+                  - BTC
+                  - USDC
+                  - USDT
+                  example: USD
+                  description: Moneda origen
+                to_currency:
+                  type: string
+                  enum:
+                  - USD
+                  - CLP
+                  - BTC
+                  - USDC
+                  - USDT
+                  example: BTC
+                  description: Moneda destino
+                amount:
+                  type: number
+                  format: float
+                  example: 100.0
+                  description: Cantidad a intercambiar
+              required:
+              - from_currency
+              - to_currency
+              - amount
+  "/api/exchange/preview":
+    post:
+      summary: Previsualizar intercambio de monedas
+      tags:
+      - Exchange
+      security:
+      - Bearer: []
+      description: Devuelve monto a intercambiar, tasa de cambio y total a recibir,
+        sin modificar balances.
+      parameters: []
+      responses:
+        '200':
+          description: Preview exitoso
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  amount:
+                    type: number
+                    format: float
+                    example: 100.0
+                  rate:
+                    type: number
+                    format: float
+                    example: 2.2e-05
+                  total:
+                    type: number
+                    format: float
+                    example: 0.0022
+                required:
+                - amount
+                - rate
+                - total
+        '422':
+          description: Error en la previsualización (parámetros inválidos, etc.)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                from_currency:
+                  type: string
+                  enum:
+                  - USD
+                  - CLP
+                  - BTC
+                  - USDC
+                  - USDT
+                  example: USD
+                  description: Moneda origen
+                to_currency:
+                  type: string
+                  enum:
+                  - USD
+                  - CLP
+                  - BTC
+                  - USDC
+                  - USDT
+                  example: BTC
+                  description: Moneda destino
+                amount:
+                  type: number
+                  format: float
+                  example: 100.0
+                  description: Cantidad a intercambiar
+              required:
+              - from_currency
+              - to_currency
+              - amount
+  "/api/prices":
+    get:
+      summary: Obtener precios de criptomonedas
+      tags:
+      - Prices
+      security:
+      - Bearer: []
+      description: Consulta precios actuales de criptomonedas desde API externa (con
+        caché de 5 minutos)
+      responses:
+        '200':
+          description: Precios obtenidos exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prices:
+                    type: object
+                    description: Precios de criptomonedas
+                    example:
+                      BTC:
+                        USD: 45000.0
+                        CLP: 40000000.0
+                      USDC:
+                        USD: 1.0
+                        CLP: 890.0
+                      USDT:
+                        USD: 1.0
+                        CLP: 890.0
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '503':
+          description: Servicio no disponible (API externa con error)
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/transactions":
+    get:
+      summary: Obtener historial de transacciones
+      tags:
+      - Transactions
+      security:
+      - Bearer: []
+      description: Retorna el historial de transacciones del usuario con filtros opcionales
+        y paginación
+      parameters:
+      - name: status
+        in: query
+        required: false
+        description: "Filtrar por estado:\n * `pending` \n * `completed` \n * `rejected`
+          \n "
+        enum:
+        - pending
+        - completed
+        - rejected
+        schema:
+          type: string
+      - name: from_currency
+        in: query
+        required: false
+        description: Filtrar por moneda de origen
+        schema:
+          type: string
+      - name: to_currency
+        in: query
+        required: false
+        description: Filtrar por moneda de destino
+        schema:
+          type: string
+      - name: from_date
+        in: query
+        required: false
+        description: Filtrar desde fecha (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: to_date
+        in: query
+        required: false
+        description: Filtrar hasta fecha (YYYY-MM-DD)
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        description: 'Número de página (default: 1)'
+        schema:
+          type: integer
+      - name: limit
+        in: query
+        required: false
+        description: 'Resultados por página (default: 20, max: 100)'
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Transacciones filtradas por estado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      "$ref": "#/components/schemas/Transaction"
+                  page:
+                    type: integer
+                    example: 1
+                  limit:
+                    type: integer
+                    example: 20
+                  total:
+                    type: integer
+                    example: 100
+                  total_pages:
+                    type: integer
+                    example: 5
+                  has_next:
+                    type: boolean
+                    example: true
+                  has_prev:
+                    type: boolean
+                    example: false
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+  "/api/transactions/{id}":
+    get:
+      summary: Obtener detalle de transacción
+      tags:
+      - Transactions
+      security:
+      - Bearer: []
+      parameters:
+      - name: id
+        in: path
+        format: uuid
+        description: UUID de la transacción
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Transacción obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transaction:
+                    "$ref": "#/components/schemas/Transaction"
+        '404':
+          description: Transacción no encontrada
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Error"
+servers:
+- url: http://localhost:3000
+  description: Development server
+- url: https://api.vitawallet.io
+  description: Production server (opcional)
+components:
+  securitySchemes:
+    Bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'JWT token obtenido en /auth/login. Formato: Bearer {token}'
+  schemas:
+    User:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a916-446655440000
+        email:
+          type: string
+          example: user@example.com
+      required:
+      - uuid
+      - email
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Invalid email or password
+    ValidationErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: string
+          example:
+          - Email can't be blank
+          - Password is too short
+    Balance:
+      type: object
+      properties:
+        currency:
+          type: string
+          enum:
+          - USD
+          - CLP
+          - BTC
+          - USDC
+          - USDT
+          example: USD
+        amount:
+          type: string
+          description: Amount as string for precision
+          example: '1000.0'
+        usd_value:
+          type: string
+          description: USD value as string
+          example: '1000.0'
+    Transaction:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a916-446655440000
+        from_currency:
+          type: string
+          example: USD
+        to_currency:
+          type: string
+          example: BTC
+        amount_from:
+          type: string
+          description: Amount as string for precision
+          example: '100.0'
+        amount_to:
+          type: string
+          description: Amount as string for precision
+          example: '0.00222'
+        rate:
+          type: string
+          description: Rate as string for precision
+          example: '0.000022'
+        status:
+          type: string
+          enum:
+          - pending
+          - completed
+          - rejected
+          example: completed
+        error_message:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+tags:
+- name: Auth
+  description: Endpoints de autenticación (Login/Register)
+- name: Balances
+  description: Consulta de balances del usuario
+- name: Prices
+  description: Consulta de precios de criptomonedas
+- name: Exchange
+  description: Intercambio de monedas
+- name: Transactions
+  description: Historial de transacciones
